@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contrats - Insurance API</title>
+<style>
+	:root {
+		--bg: #f5f6f8;
+		--card: #ffffff;
+		--text: #1f2933;
+		--muted: #6b7280;
+		--border: #e2e5ea;
+		--primary: #1d4ed8;
+		--primary-hover: #1e40af;
+		--danger: #b91c1c;
+		--danger-bg: #fdecec;
+		--ok-bg: #e7f6ec;
+		--ok: #166534;
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+		font-size: 15px;
+		background: var(--bg);
+		color: var(--text);
+	}
+	main { max-width: 1000px; margin: 0 auto; padding: 32px 16px; }
+	header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+	h1 { margin: 0; font-size: 26px; }
+	h2 { margin: 0 0 16px; font-size: 19px; }
+	.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+	.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+	button, select, input {
+		font: inherit;
+		border-radius: 6px;
+		border: 1px solid var(--border);
+		padding: 7px 12px;
+		background: #fff;
+		color: var(--text);
+	}
+	button { cursor: pointer; }
+	button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+	button.primary:hover { background: var(--primary-hover); }
+	button.danger { color: var(--danger); }
+	button.danger:hover { background: var(--danger-bg); }
+	button.small { padding: 4px 10px; font-size: 13px; }
+	.table-wrap { overflow-x: auto; }
+	table { width: 100%; border-collapse: collapse; }
+	th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+	th { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+	td.num { text-align: right; font-variant-numeric: tabular-nums; }
+	th.num { text-align: right; }
+	td.actions { text-align: right; }
+	td.actions button + button { margin-left: 6px; }
+	.badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+	.badge.ACTIF { background: var(--ok-bg); color: var(--ok); }
+	.badge.SUSPENDU { background: #fff4e0; color: #92400e; }
+	.badge.RESILIE { background: #eceef1; color: var(--muted); }
+	.empty { color: var(--muted); text-align: center; padding: 24px; }
+	form .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+	label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; }
+	label input, label select { font-weight: 400; }
+	.field-error { color: var(--danger); font-size: 12px; font-weight: 400; min-height: 1em; }
+	.form-actions { display: flex; gap: 10px; margin-top: 18px; }
+	.message { padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; }
+	.message.error { background: var(--danger-bg); color: var(--danger); }
+	.message.success { background: var(--ok-bg); color: var(--ok); }
+</style>
+</head>
+<body>
+<main>
+	<header>
+		<h1>Contrats</h1>
+		<div class="toolbar">
+			<label for="filtre-statut" style="flex-direction: row; align-items: center; gap: 8px;">
+				Statut
+				<select id="filtre-statut">
+					<option value="">Tous</option>
+				</select>
+			</label>
+			<button id="btn-nouveau" class="primary">+ Nouveau contrat</button>
+		</div>
+	</header>
+
+	<div id="message" class="message" hidden></div>
+
+	<section id="form-card" class="card" hidden>
+		<h2 id="form-titre">Nouveau contrat</h2>
+		<form id="form-contrat" novalidate>
+			<div class="grid">
+				<label>Num&eacute;ro
+					<input name="numero" maxlength="30" required>
+					<span class="field-error" data-for="numero"></span>
+				</label>
+				<label>Type
+					<select name="typeContrat" required></select>
+					<span class="field-error" data-for="typeContrat"></span>
+				</label>
+				<label>Statut
+					<select name="statut"></select>
+					<span class="field-error" data-for="statut"></span>
+				</label>
+				<label>Date de d&eacute;but
+					<input name="dateDebut" type="date" required>
+					<span class="field-error" data-for="dateDebut"></span>
+				</label>
+				<label>Date de fin
+					<input name="dateFin" type="date">
+					<span class="field-error" data-for="dateFin"></span>
+				</label>
+				<label>Prime annuelle
+					<input name="primeAnnuelle" type="number" step="0.01" min="0.01" required>
+					<span class="field-error" data-for="primeAnnuelle"></span>
+				</label>
+			</div>
+			<div class="form-actions">
+				<button type="submit" class="primary" id="btn-enregistrer">Enregistrer</button>
+				<button type="button" id="btn-annuler">Annuler</button>
+			</div>
+		</form>
+	</section>
+
+	<section class="card">
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>Num&eacute;ro</th>
+						<th>Type</th>
+						<th>Statut</th>
+						<th>D&eacute;but</th>
+						<th>Fin</th>
+						<th class="num">Prime annuelle</th>
+						<th></th>
+					</tr>
+				</thead>
+				<tbody id="liste"></tbody>
+			</table>
+		</div>
+	</section>
+</main>
+
+<script>
+	// Accents are written as unicode escapes to keep this file ASCII only.
+	const API = '/api/contrats';
+	const TYPES = { AUTO: 'Auto', HABITATION: 'Habitation', SANTE: 'Sant\u00e9', VIE: 'Vie' };
+	const STATUTS = { ACTIF: 'Actif', SUSPENDU: 'Suspendu', RESILIE: 'R\u00e9sili\u00e9' };
+	const montant = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+	const form = document.getElementById('form-contrat');
+	const formCard = document.getElementById('form-card');
+	const filtre = document.getElementById('filtre-statut');
+	const liste = document.getElementById('liste');
+	const message = document.getElementById('message');
+	let editionId = null;
+
+	function remplirOptions(select, valeurs, premiere) {
+		if (premiere !== undefined) {
+			select.append(new Option(premiere, ''));
+		}
+		for (const [code, libelle] of Object.entries(valeurs)) {
+			select.append(new Option(libelle, code));
+		}
+	}
+
+	function formatDate(iso) {
+		if (!iso) {
+			return '-';
+		}
+		const [a, m, j] = iso.split('-');
+		return j + '/' + m + '/' + a;
+	}
+
+	function afficherMessage(texte, type) {
+		message.textContent = texte;
+		message.className = 'message ' + type;
+		message.hidden = false;
+		clearTimeout(afficherMessage.timer);
+		afficherMessage.timer = setTimeout(() => { message.hidden = true; }, 5000);
+	}
+
+	function cellule(texte, classe) {
+		const td = document.createElement('td');
+		td.textContent = texte;
+		if (classe) {
+			td.className = classe;
+		}
+		return td;
+	}
+
+	async function charger() {
+		const url = filtre.value ? API + '?statut=' + encodeURIComponent(filtre.value) : API;
+		try {
+			const reponse = await fetch(url);
+			if (!reponse.ok) {
+				throw new Error('HTTP ' + reponse.status);
+			}
+			afficherListe(await reponse.json());
+		} catch (e) {
+			afficherMessage('Impossible de charger les contrats (' + e.message + ').', 'error');
+		}
+	}
+
+	function afficherListe(contrats) {
+		liste.replaceChildren();
+		if (contrats.length === 0) {
+			const tr = document.createElement('tr');
+			const td = cellule('Aucun contrat.', 'empty');
+			td.colSpan = 7;
+			tr.append(td);
+			liste.append(tr);
+			return;
+		}
+		for (const c of contrats) {
+			const tr = document.createElement('tr');
+			const statut = document.createElement('td');
+			const badge = document.createElement('span');
+			badge.className = 'badge ' + c.statut;
+			badge.textContent = STATUTS[c.statut] || c.statut;
+			statut.append(badge);
+
+			const actions = document.createElement('td');
+			actions.className = 'actions';
+			const modifier = document.createElement('button');
+			modifier.className = 'small';
+			modifier.textContent = 'Modifier';
+			modifier.addEventListener('click', () => ouvrirFormulaire(c));
+			const supprimer = document.createElement('button');
+			supprimer.className = 'small danger';
+			supprimer.textContent = 'Supprimer';
+			supprimer.addEventListener('click', () => supprimerContrat(c));
+			actions.append(modifier, supprimer);
+
+			tr.append(
+				cellule(c.numero),
+				cellule(TYPES[c.typeContrat] || c.typeContrat),
+				statut,
+				cellule(formatDate(c.dateDebut)),
+				cellule(formatDate(c.dateFin)),
+				cellule(montant.format(c.primeAnnuelle), 'num'),
+				actions
+			);
+			liste.append(tr);
+		}
+	}
+
+	function effacerErreurs() {
+		form.querySelectorAll('.field-error').forEach(el => { el.textContent = ''; });
+	}
+
+	function ouvrirFormulaire(contrat) {
+		effacerErreurs();
+		form.reset();
+		editionId = contrat ? contrat.id : null;
+		document.getElementById('form-titre').textContent =
+			contrat ? 'Modifier le contrat ' + contrat.numero : 'Nouveau contrat';
+		if (contrat) {
+			form.numero.value = contrat.numero;
+			form.typeContrat.value = contrat.typeContrat;
+			form.statut.value = contrat.statut;
+			form.dateDebut.value = contrat.dateDebut;
+			form.dateFin.value = contrat.dateFin || '';
+			form.primeAnnuelle.value = contrat.primeAnnuelle;
+		} else {
+			form.statut.value = 'ACTIF';
+		}
+		formCard.hidden = false;
+		form.numero.focus();
+	}
+
+	function fermerFormulaire() {
+		formCard.hidden = true;
+		editionId = null;
+	}
+
+	async function enregistrer(event) {
+		event.preventDefault();
+		effacerErreurs();
+		const corps = {
+			numero: form.numero.value.trim(),
+			typeContrat: form.typeContrat.value || null,
+			statut: form.statut.value || null,
+			dateDebut: form.dateDebut.value || null,
+			dateFin: form.dateFin.value || null,
+			primeAnnuelle: form.primeAnnuelle.value === '' ? null : Number(form.primeAnnuelle.value)
+		};
+		const url = editionId ? API + '/' + editionId : API;
+		try {
+			const reponse = await fetch(url, {
+				method: editionId ? 'PUT' : 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(corps)
+			});
+			if (reponse.ok) {
+				afficherMessage(editionId ? 'Contrat modifi\u00e9.' : 'Contrat cr\u00e9\u00e9.', 'success');
+				fermerFormulaire();
+				charger();
+				return;
+			}
+			const probleme = await reponse.json().catch(() => ({}));
+			if (probleme.errors) {
+				for (const [champ, texte] of Object.entries(probleme.errors)) {
+					// The date order rule is reported on "periodeValide": show it under the end date.
+					const cible = champ === 'periodeValide' ? 'dateFin' : champ;
+					const el = form.querySelector('.field-error[data-for="' + cible + '"]');
+					if (el) {
+						el.textContent = texte;
+					}
+				}
+			} else {
+				afficherMessage(probleme.detail || ('Erreur HTTP ' + reponse.status), 'error');
+			}
+		} catch (e) {
+			afficherMessage('Erreur r\u00e9seau (' + e.message + ').', 'error');
+		}
+	}
+
+	async function supprimerContrat(contrat) {
+		if (!window.confirm('Supprimer le contrat ' + contrat.numero + ' ?')) {
+			return;
+		}
+		try {
+			const reponse = await fetch(API + '/' + contrat.id, { method: 'DELETE' });
+			if (!reponse.ok) {
+				const probleme = await reponse.json().catch(() => ({}));
+				throw new Error(probleme.detail || 'HTTP ' + reponse.status);
+			}
+			afficherMessage('Contrat supprim\u00e9.', 'success');
+			if (editionId === contrat.id) {
+				fermerFormulaire();
+			}
+			charger();
+		} catch (e) {
+			afficherMessage('Suppression impossible (' + e.message + ').', 'error');
+		}
+	}
+
+	remplirOptions(filtre, STATUTS);
+	remplirOptions(form.typeContrat, TYPES, '-- Choisir --');
+	remplirOptions(form.statut, STATUTS);
+	document.getElementById('btn-nouveau').addEventListener('click', () => ouvrirFormulaire(null));
+	document.getElementById('btn-annuler').addEventListener('click', fermerFormulaire);
+	filtre.addEventListener('change', charger);
+	form.addEventListener('submit', enregistrer);
+	charger();
+</script>
+</body>
+</html>
